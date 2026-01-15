@@ -1,3 +1,14 @@
+"""
+GDUFS Auth Auto Login
+
+Author: Systina12
+GitHub: https://github.com/Systina12/gdufs-auth-autologin-python
+Created: 2026-01
+License: MIT
+
+"""
+
+
 import time
 from requests import Session
 from lxml import html
