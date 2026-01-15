@@ -23,6 +23,7 @@ class GdufsAuthAutoLogin:
         self._init_session()
 
     def _init_session(self):
+        #有些字段没必要，但是保持和浏览器一致
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -49,7 +50,7 @@ class GdufsAuthAutoLogin:
     def _get_param(self, text: str, param_id: str) -> str:
         tree = html.fromstring(text)
 
-        # 只在登录表单 pwdFromId 内查找
+        # 只在登录表单 pwdFromId 内查找，有其他同id项，虽然内容实际相同但是以防万一
         elem = tree.xpath(
             f'//form[@id="pwdFromId"]//input[@id="{param_id}"]'
         )
@@ -67,6 +68,7 @@ class GdufsAuthAutoLogin:
 
         return value
 
+    #从前端获取必要的参数
     def _get_event_id(self, text: str) -> str:
         return self._get_param(text, "_eventId")
 
@@ -88,6 +90,7 @@ class GdufsAuthAutoLogin:
     def _get_timestamp(self) -> int:
         return int(time.time() * 1000)
 
+    #实现js中的aes加密
     def _encrypt_password(self,password: str, salt: str) -> str:
         def random_string(length: int) -> str:
             AES_CHARS = "ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678"
@@ -101,12 +104,11 @@ class GdufsAuthAutoLogin:
 
         cipher = AES.new(key, AES.MODE_CBC, iv=iv)
         ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
-
-        # OpenSSL format: Salted__ + salt(8) + ciphertext
-        openssl_blob =ciphertext
-        return base64.b64encode(openssl_blob).decode("utf-8")
+        return base64.b64encode(ciphertext).decode("utf-8")
 
     def _pre_login_chain(self):
+        #哪怕不做这个操作也可以直接硬编码 多因素浏览器指纹cookie，但是这里还是写了，以防万一
+        #实际上sso是没有做这个cookie的动态下发的，而是硬编码了一个有效期到2094年的
         self.session.get(self.login_url,verify=self.verify_ssl)
         # combined_url=self.authserver_url+"/authserver/combinedLogin.do?type=weixin"
         # self.session.get(combined_url,verify=self.verify_ssl)
@@ -118,6 +120,7 @@ class GdufsAuthAutoLogin:
         self.session.get(need_captcha_url,verify=self.verify_ssl)
         open_captcha_url=self.authserver_url+f"/authserver/common/openSliderCaptcha.htl?_={self._get_timestamp()}"
         self.session.get(open_captcha_url,verify=self.verify_ssl)
+        #没什么大用但是保持一致
         self.session.cookies.set(
             name="org.springframework.web.servlet.i18n.CookieLocaleResolver.LOCALE",
             value="zh_CN",
